@@ -302,6 +302,21 @@ def calculate_daily_targets(gender, age, height, weight, activity_level, goal_of
 - **簡単な形**：記録CSVを Excel／スプレッドシートで開いてグラフ化（コードを増やさない）。
 - **アプリ組み込み**：Python のグラフ作成ライブラリ（matplotlib など）でアプリ自身が描画。
 
+### 実装状況（2026-06-29）— ファイル: visualize.py / setup_font.py
+
+- **方法は「アプリ組み込み（matplotlib）」に決定**。records.csv を読み、グラフを画像(PNG)に保存する。
+- **make_calorie_chart(records)**：日付ごとに「実績kcal」と「目標kcal」を2本並べた棒グラフ → calories.png。
+- **make_protein_chart(records)**：日付ごとの「実績P ÷ 目標P × 100(%)」を折れ線 → protein.png。
+  100%の目安線を引く。割り算（達成度）はコード側で計算（数値はブレさせない）。
+- **visualize_all()**：上記2つをまとめて作る。記録ゼロのときは作らず案内だけ出す。
+- **画面の無い環境への配慮**：matplotlib を Agg（画像書き出し）モードで使い、PNGに保存。
+  できた画像を開けばどの環境でもグラフを確認できる。
+- **日本語表示**：グラフに日本語を出すため日本語フォント（IPAexゴシック）を使う。
+  - setup_font.py：フォントを assets/fonts/ipaexg.ttf に用意する（無い環境はこれを実行）。
+  - フォントが見つからない場合は、文字化け防止のため自動で英語ラベルに切り替える。
+  - フォント本体(数MB)とグラフ画像(*.png)は .gitignore で履歴に入れない（作り直せるため）。
+- テスト：test_visualize.py。画像が作られる／記録ゼロは空／達成度の計算、を確認。
+
 ---
 
 ## 10. 開発ロードマップ（小さく作って育てる）

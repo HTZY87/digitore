@@ -11,6 +11,15 @@ _trash/
 records.csv
 records_*.csv
 
+# 段階⑥ 可視化が作るグラフ画像（実行のたびに作り直せるので履歴に入れない）
+*.png
+
+# 日本語フォント本体（数MBのバイナリ。履歴を重くしないため除外）。
+#   無い環境では  python setup_font.py  で取得できる（ライセンス文も一緒に入る）。
+assets/fonts/*.ttf
+assets/fonts/*.otf
+assets/fonts/*.txt
+
 # --- 秘密情報・個人設定をGitHubに上げないための予防線（多重防御）---
 # Claude Code がフォルダ内に作る個人設定（万一作られても履歴に入れない）
 .claude/
