@@ -5,6 +5,12 @@ __pycache__/
 # _trash は「削除の退避先」なので履歴管理の対象外にする
 _trash/
 
+# 記録（ユーザーの個人データ）。中身は人それぞれなので履歴には入れない。
+#   records.csv      … 本番の記録（機能⑤）
+#   records_*.csv    … お試し用・テスト用の記録（records_demo.csv / records_test.csv）
+records.csv
+records_*.csv
+
 # --- 秘密情報・個人設定をGitHubに上げないための予防線（多重防御）---
 # Claude Code がフォルダ内に作る個人設定（万一作られても履歴に入れない）
 .claude/
