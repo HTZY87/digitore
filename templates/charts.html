@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>グラフ</h2>
+  <p class="muted">記録（records.csv）をもとに、毎回作り直しています。</p>
+
+  <h3>① カロリー：実績 vs 目標</h3>
+  <img class="chart" src="{{ calorie_url }}" alt="カロリー 実績vs目標">
+
+  <h3>② タンパク質(P) の達成度</h3>
+  <img class="chart" src="{{ protein_url }}" alt="タンパク質 達成度">
+
+  <p class="muted">グラフ内の文字は、日本語フォントがあれば日本語で表示します
+     （無い環境では英語）。</p>
+</div>
+{% endblock %}

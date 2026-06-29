@@ -13,6 +13,13 @@ RUN apt-get update && apt-get install -y \
 # Claude Code CLI をグローバルインストール
 RUN npm install -g @anthropic-ai/claude-code
 
+# デジトレが使うPythonライブラリ（Flask=Web画面 / matplotlib=グラフ）を入れる。
+# requirements.txt を先にコピーしておくと、依存だけ変えたときにここから作り直せる。
+# --break-system-packages：このOSのpip保護(PEP668)を承知のうえで入れる指定。
+#   （箱は使い捨て前提＝箱の中に直接入れてよい、という判断）
+COPY requirements.txt /tmp/requirements.txt
+RUN pip3 install --no-cache-dir --break-system-packages -r /tmp/requirements.txt
+
 # ログイン情報の保存先を用意し、非rootの node ユーザー所有にする
 # （理由1：--dangerously-skip-permissions は root 実行を拒否する仕様なので node で動かす）
 # （理由2：ここを名前付きボリュームに繋ぐことで、一度ログインすれば次回から不要になる）

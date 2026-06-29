@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>記録しました：{{ menu }}</h2>
+  <table>
+    <tr><th class="text">項目</th><th>実績（食べた量）</th><th>残り許容量</th></tr>
+    <tr>
+      <td class="text">カロリー</td>
+      <td class="num">{{ "%.0f"|format(intake["kcal"]) }} kcal</td>
+      <td class="num">
+        {% if remaining["kcal"] >= 0 %}
+          あと {{ "%.0f"|format(remaining["kcal"]) }} kcal
+        {% else %}
+          {{ "%.0f"|format(-remaining["kcal"]) }} kcal オーバー
+        {% endif %}
+      </td>
+    </tr>
+    <tr>
+      <td class="text">P タンパク質</td>
+      <td class="num">{{ "%.1f"|format(intake["P"]) }} g</td>
+      <td class="num">
+        {% if remaining["P"] > 0 %}
+          あと {{ "%.1f"|format(remaining["P"]) }} g
+        {% else %}
+          目標達成（{{ "%.1f"|format(-remaining["P"]) }} g 超過）
+        {% endif %}
+      </td>
+    </tr>
+    <tr>
+      <td class="text">F 脂質</td>
+      <td class="num">{{ "%.1f"|format(intake["F"]) }} g</td>
+      <td class="num">残り {{ "%.1f"|format(remaining["F"]) }} g</td>
+    </tr>
+    <tr>
+      <td class="text">C 炭水化物</td>
+      <td class="num">{{ "%.1f"|format(intake["C"]) }} g</td>
+      <td class="num">残り {{ "%.1f"|format(remaining["C"]) }} g</td>
+    </tr>
+  </table>
+  <p class="muted">「残り許容量」は 目標 − 実績 です。プラス＝まだ食べてよい量、
+     マイナス＝食べ過ぎ（オーバー）を表します。</p>
+</div>
+
+<div class="card">
+  <p>続けて
+     <a href="{{ url_for('record') }}">もう1食 記録する</a> ／
+     <a href="{{ url_for('charts') }}">グラフを見る</a> ／
+     <a href="{{ url_for('records') }}">記録一覧を見る</a>
+  </p>
+</div>
+{% endblock %}

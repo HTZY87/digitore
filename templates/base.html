@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+{# 共通レイアウト。各画面の中身は、下の content ブロックに差し込まれる。 #}
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>デジトレ</title>
+  <style>
+    /* 非エンジニアにも読みやすい、やさしい見た目を目指したシンプルなCSS */
+    body {
+      font-family: "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+      max-width: 760px; margin: 0 auto; padding: 20px;
+      background: #f7f7f5; color: #222; line-height: 1.7;
+    }
+    h1 { font-size: 1.5rem; }
+    h2 { font-size: 1.2rem; border-bottom: 2px solid #4a90d9; padding-bottom: 4px; }
+    a { color: #2a6db0; }
+    nav { margin-bottom: 20px; font-size: 0.95rem; }
+    nav a { margin-right: 14px; text-decoration: none; }
+    .card { background: #fff; border-radius: 10px; padding: 18px 22px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 18px; }
+    .menu a { display: block; padding: 14px 16px; margin: 8px 0;
+              background: #4a90d9; color: #fff; border-radius: 8px;
+              text-decoration: none; font-weight: bold; }
+    .menu a:hover { background: #3b78bd; }
+    label { display: block; margin-top: 12px; font-weight: bold; }
+    input, select, textarea { font-size: 1rem; padding: 7px 9px; margin-top: 4px;
+              border: 1px solid #ccc; border-radius: 6px; width: 100%;
+              box-sizing: border-box; }
+    textarea { min-height: 120px; font-family: inherit; }
+    button { margin-top: 18px; padding: 11px 20px; font-size: 1rem;
+             background: #2e9e5b; color: #fff; border: none; border-radius: 8px;
+             cursor: pointer; font-weight: bold; }
+    button:hover { background: #27834c; }
+    table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+    th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: right; }
+    th { background: #eef3f8; }
+    td.text, th.text { text-align: left; }
+    .flash { background: #fff6d6; border: 1px solid #e6c84a; border-radius: 8px;
+             padding: 10px 14px; margin-bottom: 14px; }
+    .warn { background: #ffe3e3; border-color: #e07a7a; }
+    .num { font-variant-numeric: tabular-nums; }
+    .muted { color: #777; font-size: 0.9rem; }
+    img.chart { width: 100%; border: 1px solid #ddd; border-radius: 8px;
+                background: #fff; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+  <h1>🥗 デジトレ</h1>
+  <nav>
+    <a href="{{ url_for('index') }}">メニュー</a>
+    <a href="{{ url_for('onboarding') }}">初期設定</a>
+    <a href="{{ url_for('record') }}">食事を記録</a>
+    <a href="{{ url_for('records') }}">記録一覧</a>
+    <a href="{{ url_for('charts') }}">グラフ</a>
+  </nav>
+
+  {# flash（一言メッセージ）があれば上部に表示する #}
+  {% with messages = get_flashed_messages() %}
+    {% if messages %}
+      {% for m in messages %}
+        <div class="flash">{{ m }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  {% block content %}{% endblock %}
+
+  <p class="muted">※このアプリは「計算はコード・相談はAI」の方針で作っています。
+     数値の計算と記録は本物のコードが担当します。</p>
+</body>
+</html>

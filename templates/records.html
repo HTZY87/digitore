@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>記録の一覧</h2>
+  {% if rows %}
+    <table>
+      <tr>
+        <th class="text">日付</th><th>体重</th><th class="text">メニュー</th>
+        <th>実績kcal</th><th>P</th><th>F</th><th>C</th>
+        <th>目標kcal</th><th>目標P</th><th class="text">判定/備考</th>
+      </tr>
+      {% for r in rows %}
+      <tr>
+        <td class="text">{{ r["日付"] }}</td>
+        <td class="num">{{ "%.1f"|format(r["体重"]) if r["体重"] is not none else "" }}</td>
+        <td class="text">{{ r["メニュー名"] }}</td>
+        <td class="num">{{ "%.0f"|format(r["合計kcal"]) }}</td>
+        <td class="num">{{ "%.1f"|format(r["P(g)"]) }}</td>
+        <td class="num">{{ "%.1f"|format(r["F(g)"]) }}</td>
+        <td class="num">{{ "%.1f"|format(r["C(g)"]) }}</td>
+        <td class="num">{{ "%.0f"|format(r["目標kcal"]) }}</td>
+        <td class="num">{{ "%.1f"|format(r["目標P(g)"]) }}</td>
+        <td class="text">{{ r["判定/備考"] }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    <p class="muted">この表のもとデータは records.csv（中身を直接ひらいても確認できます）。</p>
+  {% else %}
+    <p>まだ記録がありません。
+       <a href="{{ url_for('record') }}">食事を記録</a>してみましょう。</p>
+  {% endif %}
+</div>
+{% endblock %}

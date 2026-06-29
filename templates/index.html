@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>ようこそ</h2>
+  {% if data %}
+    {# すでに初期設定が済んでいる場合は、今の目標をひと目で見せる #}
+    <p>現在の1日の目標（最後に設定した内容）：</p>
+    <p class="num">
+      🔥 目標カロリー <strong>{{ "%.0f"|format(data.targets["Target Kcal"]) }}</strong> kcal ／
+      🍗 P <strong>{{ "%.1f"|format(data.targets["P(g)"]) }}</strong> g ／
+      🥑 F <strong>{{ "%.1f"|format(data.targets["F(g)"]) }}</strong> g ／
+      🍚 C <strong>{{ "%.1f"|format(data.targets["C(g)"]) }}</strong> g
+    </p>
+    <p class="muted">戦略：{{ data.profile.strategy }}</p>
+  {% else %}
+    <p>まずは「初期設定」から、あなたの1日の栄養目標を計算しましょう。</p>
+  {% endif %}
+</div>
+
+<div class="card menu">
+  <h2>やりたいことを選んでください</h2>
+  <a href="{{ url_for('onboarding') }}">① 初期設定（1日の目標を計算）</a>
+  <a href="{{ url_for('record') }}">② 食事を記録する（残り許容量もすぐ分かります）</a>
+  <a href="{{ url_for('records') }}">③ 記録の一覧を見る</a>
+  <a href="{{ url_for('charts') }}">④ グラフを見る（実績vs目標・タンパク質達成度）</a>
+</div>
+{% endblock %}

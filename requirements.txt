@@ -1,0 +1,9 @@
+# デジトレが使う外部ライブラリ（Python）。
+# まとめて入れるには：  pip install -r requirements.txt
+#   （Dockerの箱では --break-system-packages を付けて入れます。Dockerfile参照）
+
+# 段階⑦：Web UI（ブラウザで使う画面）
+flask
+
+# 段階⑥：可視化（グラフを画像にする）
+matplotlib

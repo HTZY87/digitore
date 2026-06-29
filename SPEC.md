@@ -4,18 +4,25 @@
 > コードを書く前に、まずここに合意した内容を書きます（＝仕様駆動開発）。
 > 仕様を変えたいときは、コードより先に**このファイルを直す**のがルールです。
 
-最終更新: 2026-06-21 ／ ステータス: 段階①②③④完了（次は段階⑤：記録）
+最終更新: 2026-06-29 ／ ステータス: 段階①〜⑦完了（記録⑤・可視化⑥・Web UI⑦まで実装済み）
 
-### ▼ ファイル構成（機能ごとに分割済み・2026-06-21）
-- main.py     … 入口・司令塔
+### ▼ ファイル構成（機能ごとに分割済み・2026-06-29 更新）
+- main.py     … 入口・司令塔（ターミナル版）
+- app.py      … ⑦ 入口・司令塔（Web版・Flask）。templates/ がその画面(HTML)
 - targets.py  … ② 目標値の計算（計算エンジン）
-- safety.py   … ⑥ 安全警告
+- safety.py   … ⑥ 安全警告（evaluate_safety=計算 / check_safety=表示）
 - dialogue.py … ① 対話・入力・表示
 - intake.py   … ③ 摂取量の計算（foods.csv を読み込む）
+- consult.py  … ④ 残り許容量（目標 − 実績）
+- record.py   … ⑤ 記録（records.csv に保存・読み込み）
+- visualize.py… ⑥ 可視化（記録をグラフ画像にする）
+- setup_font.py… ⑥の下ごしらえ（グラフ用の日本語フォントを用意）
 - foods.csv   … 食品データ（100gあたりの値。八訂をもとにした暫定12品。後で公式値に拡張）
-- test_targets.py / test_intake.py … 自動テスト
+- requirements.txt … 使う外部ライブラリ（flask / matplotlib）
+- test_targets.py / test_intake.py / test_consult.py / test_record.py / test_visualize.py / test_app.py … 自動テスト
+- assets/fonts/ … 日本語フォント置き場（本体は .gitignore で除外。setup_font.py で取得）
 - _trash/ … 旧ファイルの退避先（完全削除はユーザーが行う）
-- .gitignore … Gitに無視させるファイルの設定（__pycache__ などの使い捨てを除外）
+- .gitignore … Gitに無視させるファイルの設定（使い捨て・個人データ・生成物を除外）
 
 ### ▼ 完了した宿題（2026-06-21）
 1. ✓ エンジンは丸めず正確な数値を返す（丸めは表示側へ移動）
@@ -41,9 +48,17 @@
 - test_consult.py：自動テスト3件 合格。
 - 食べ物の“提案文”はAIの役目（将来）。コードは数値を出すまでを担当。
 
-### ▼ 次回やること
-- 段階⑤（記録＝機能⑤）。1日分のデータを CSV に書き込んで残す。
-  保存項目：日付, 体重, メニュー名, 合計kcal, P, F, C, 判定/備考（SPEC §7）。
+### ▼ 段階⑤⑥⑦（完了・2026-06-29）
+- 段階⑤ 記録：record.py（records.csv に保存／読み込み）。SPEC §7 参照。
+- 段階⑥ 可視化：visualize.py（カロリー実績vs目標・タンパク質達成度をPNGに）。SPEC §9-2 参照。
+  日本語フォントは setup_font.py で用意（IPAexゴシック）。
+- 段階⑦ UI：app.py（Flask）。ブラウザで初期設定〜記録〜残り〜一覧〜グラフを操作できる。SPEC §9-3 参照。
+  計算・記録・可視化の本体は各担当ファイルのまま（app.py は画面とつなぐ司令塔）。
+
+### ▼ 次回やること（候補）
+- 食品データ foods.csv を公式値（八訂）で拡張する。
+- 「料理名→材料＋量」の解釈（ローカルLLM）を入れて、ざっくり入力に対応する。
+- 記録の保存先を CSV から SQLite 等へ移すか検討（SPEC §11）。
 
 ---
 
@@ -319,6 +334,31 @@ def calculate_daily_targets(gender, age, height, weight, activity_level, goal_of
 
 ---
 
+## 9-3. 機能⑦：見た目（UI）＝ Web版
+
+ターミナル版（main.py）とは別に、ブラウザで使える Web版を用意する。
+各機能の入口がバラバラだったのを、1つの入口（app.py）にまとめるのが目的。
+
+### 実装状況（2026-06-29）— ファイル: app.py / templates/ / requirements.txt
+
+- **方式は「Web UI（Flask）」に決定**（ユーザー選択・2026-06-29）。
+- **動かし方**：`python app.py` → 画面に出る `http://127.0.0.1:5000/` をブラウザで開く。
+  - 自分のPCからだけ見える設定（外には公開しない＝安全）。
+- **画面の構成**：
+  - トップ … やりたいことを選ぶメニュー。設定済みなら今の目標も表示。
+  - 初期設定 … 体の情報を入力 → ② 目標を計算 → ⑥ 安全警告を表示。
+  - 食事を記録 … 食べたものを入力 → ③ 摂取量 → ④ 残り許容量 → ⑤ records.csv に保存（1画面で完結）。
+  - 記録一覧 … records.csv を表で表示。
+  - グラフ … ⑥ 可視化の画像を作って表示。
+- **設計の線引き（重要）**：app.py は“画面とつなぐ司令塔”に徹し、計算・記録・可視化は
+  各担当ファイル（targets/intake/consult/record/visualize/safety）をそのまま呼ぶ。
+  → ロジックを2か所に分裂させない（ターミナル版とWeb版で同じ計算を共有）。
+- **保存ファイル**：profile.json（最後に設定した目標）。個人データなので .gitignore で除外。
+- **依存ライブラリ**：flask（画面）、matplotlib（グラフ）。requirements.txt にまとめ、Dockerfileで導入。
+- テスト：test_app.py。Flaskのテスト用クライアントで全画面を確認（本物データは退避して壊さない）。
+
+---
+
 ## 10. 開発ロードマップ（小さく作って育てる）
 
 | 段階 | 作るもの | 学べること |
@@ -329,7 +369,7 @@ def calculate_daily_targets(gender, age, height, weight, activity_level, goal_of
 | ④ | 食事コンサル（機能④） | 計算の組み合わせ |
 | ⑤ | 記録（機能⑤） | ファイル書き込み |
 | ⑥ | 可視化（機能⑧） | グラフ作成・データの集計 |
-| ⑦（発展） | 見た目（UI） | Webの基礎 |
+| ⑦（発展） | 見た目（UI）＝Web版(Flask) ✓完了 | Webの基礎 |
 
 各段階の**前に説明して確認**し、終わるごとに**立ち止まって相談**する。
 
@@ -339,6 +379,6 @@ def calculate_daily_targets(gender, age, height, weight, activity_level, goal_of
 
 - [ ] **食品データの入手元**：日本食品標準成分表（文部科学省の公式データ）を土台にするか。
 - [ ] **最終的な記録の保存先**：CSV / SQLite / Googleスプレッドシートのどれにするか。
-- [ ] **使い方の形**：まずは文字で操作するターミナル版。将来UIを付けるか。
-- [ ] **可視化の方法**：Excel/スプレッドシートで開く簡単な形か、アプリ組み込み（matplotlib等）か。
+- [x] **使い方の形**：ターミナル版(main.py)に加え、Web版(app.py/Flask)を実装（2026-06-29）。
+- [x] **可視化の方法**：アプリ組み込み（matplotlib）で実装。グラフはPNGに保存（2026-06-29）。
 - [ ] **プロジェクト/フォルダ名**：仮に `digitore`。

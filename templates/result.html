@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>あなたの1日の目標</h2>
+  {# エンジンは丸めず返すので、表示するここで丸める（:.1f / :.0f）。 #}
+  <table>
+    <tr><td class="text">BMR（基礎代謝量＝何もしなくても使うカロリー）</td>
+        <td class="num">{{ "%.1f"|format(targets["BMR"]) }} kcal</td></tr>
+    <tr><td class="text">TDEE（1日の総消費カロリー）</td>
+        <td class="num">{{ "%.1f"|format(targets["TDEE"]) }} kcal</td></tr>
+    <tr><td class="text"><strong>目標カロリー</strong></td>
+        <td class="num"><strong>{{ "%.0f"|format(targets["Target Kcal"]) }} kcal</strong></td></tr>
+    <tr><td class="text">P タンパク質</td>
+        <td class="num">{{ "%.1f"|format(targets["P(g)"]) }} g</td></tr>
+    <tr><td class="text">F 脂質</td>
+        <td class="num">{{ "%.1f"|format(targets["F(g)"]) }} g</td></tr>
+    <tr><td class="text">C 炭水化物</td>
+        <td class="num">{{ "%.1f"|format(targets["C(g)"]) }} g</td></tr>
+  </table>
+</div>
+
+{# ⑥ 安全警告：極端な設定なら赤く警告、ふつうなら緑で安心メッセージ #}
+<div class="card {% if safety.is_extreme %}flash warn{% endif %}">
+  <h2>安全チェック</h2>
+  {% if safety.is_extreme %}
+    <p>⚠ 注意：この設定だと月の体重変化が約
+       <strong class="num">{{ "%.1f"|format(safety.percent) }}%</strong>
+       （{{ "%+.1f"|format(safety.monthly_change_kg) }}kg）と大きめです。<br>
+       体に負担がかかる可能性があります。もう少しゆるやかな目標も検討しましょう。</p>
+  {% else %}
+    <p>✓ 体重変化は月 約
+       <strong class="num">{{ "%.1f"|format(safety.percent) }}%</strong>
+       （{{ "%+.1f"|format(safety.monthly_change_kg) }}kg）。無理のない範囲です。</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <p>目標が決まりました。次は
+     <a href="{{ url_for('record') }}">食事を記録</a>してみましょう。</p>
+</div>
+{% endblock %}

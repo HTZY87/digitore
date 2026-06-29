@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2>食事を記録する</h2>
+  <p class="muted">食べたものを「食品名 グラム」の形で1行ずつ入力してください。
+     計算すると「残り許容量」も表示し、記録に保存します。</p>
+
+  <form method="post" action="{{ url_for('record') }}">
+    <label>日付（例：2026-06-29）</label>
+    <input type="date" name="date">
+
+    <label>体重（kg・未入力なら初期設定の {{ profile.weight }}kg を使います）</label>
+    <input type="number" name="weight" min="20" max="300" step="0.1"
+           placeholder="{{ profile.weight }}">
+
+    <label>メニュー名（例：鶏むね定食）</label>
+    <input type="text" name="menu" placeholder="食事">
+
+    <label>食べたもの（1行に「食品名 グラム」）</label>
+    <textarea name="meal" placeholder="ごはん（精白米） 200&#10;鶏むね肉（皮なし・生） 150&#10;卵（全卵・生） 50"></textarea>
+
+    <label>判定・備考（空ならカロリーの過不足を自動で記録します）</label>
+    <input type="text" name="note" placeholder="（任意）">
+
+    <button type="submit">計算して記録する</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>登録済みの食品名（このまま使えます）</h2>
+  <p class="muted">下の名前をそのままコピーして使うと、入力ミスを防げます。
+     量は100gあたりの値から自動で換算します。</p>
+  <ul>
+    {% for name in food_names %}
+      <li>{{ name }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}
