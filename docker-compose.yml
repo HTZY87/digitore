@@ -6,6 +6,9 @@ services:
     volumes:
       - ./:/project                   # デジトレ本体を箱の中の /project に繋ぐ（マウント）
       - claude-config:/home/node/.claude   # ★ログイン情報を箱の外に保存（毎回ログイン不要に）
+    ports:
+      - "5000:5000"                   # Web版(app.py)の画面を箱の外に公開（ホストPCのブラウザから開ける）
+                                      #   左=ホスト側 : 右=箱の中。http://127.0.0.1:5000 でアクセス。
     environment:
       - CLAUDE_CONFIG_DIR=/home/node/.claude   # Claudeの設定の保存先を指定
     stdin_open: true                  # 箱の中でキーボード入力を受け付ける
