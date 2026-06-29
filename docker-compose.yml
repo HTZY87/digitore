@@ -1,0 +1,18 @@
+services:
+  claude:
+    build: .                          # このフォルダのDockerfileで箱を作る
+    user: node                        # 非rootユーザーで動かす（root禁止の制約を回避＋安全のため）
+    working_dir: /project             # 箱の中の作業場所
+    volumes:
+      - ./:/project                   # デジトレ本体を箱の中の /project に繋ぐ（マウント）
+      - claude-config:/home/node/.claude   # ★ログイン情報を箱の外に保存（毎回ログイン不要に）
+    environment:
+      - CLAUDE_CONFIG_DIR=/home/node/.claude   # Claudeの設定の保存先を指定
+    stdin_open: true                  # 箱の中でキーボード入力を受け付ける
+    tty: true                         # ターミナルとして動かす
+    # 起動したら自動で「権限フル委任モード」のClaudeを立ち上げる
+    # （bashなど別コマンドを渡せば、この設定は上書きされる）
+    command: claude --dangerously-skip-permissions
+
+volumes:
+  claude-config:                      # ログイン情報の保管庫（名前付きボリューム）
