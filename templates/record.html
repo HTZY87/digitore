@@ -5,35 +5,63 @@
   <p class="muted">食べたものを「食品名 グラム」の形で1行ずつ入力してください。
      計算すると「残り許容量」も表示し、記録に保存します。</p>
 
+  {# 各欄の value には form（app.pyで用意した表示用の値）を入れる。
+     初回は日付＝今日、エラーで戻ってきたときは入力した内容がそのまま残る。 #}
   <form method="post" action="{{ url_for('record') }}">
-    <label>日付（例：2026-06-29）</label>
-    <input type="date" name="date">
+    <label>日付</label>
+    <input type="date" name="date" value="{{ form.date }}">
 
     <label>体重（kg・未入力なら初期設定の {{ profile.weight }}kg を使います）</label>
     <input type="number" name="weight" min="20" max="300" step="0.1"
-           placeholder="{{ profile.weight }}">
+           placeholder="{{ profile.weight }}" value="{{ form.weight }}">
 
     <label>メニュー名（例：鶏むね定食）</label>
-    <input type="text" name="menu" placeholder="食事">
+    <input type="text" name="menu" placeholder="食事" value="{{ form.menu }}">
 
     <label>食べたもの（1行に「食品名 グラム」）</label>
-    <textarea name="meal" placeholder="ごはん（精白米） 200&#10;鶏むね肉（皮なし・生） 150&#10;卵（全卵・生） 50"></textarea>
+    <textarea name="meal" placeholder="ごはん（精白米） 200&#10;鶏むね肉（皮なし・生） 150&#10;卵（全卵・生） 50">{{ form.meal }}</textarea>
 
     <label>判定・備考（空ならカロリーの過不足を自動で記録します）</label>
-    <input type="text" name="note" placeholder="（任意）">
+    <input type="text" name="note" placeholder="（任意）" value="{{ form.note }}">
 
     <button type="submit">計算して記録する</button>
   </form>
 </div>
 
 <div class="card">
-  <h2>登録済みの食品名（このまま使えます）</h2>
-  <p class="muted">下の名前をそのままコピーして使うと、入力ミスを防げます。
-     量は100gあたりの値から自動で換算します。</p>
-  <ul>
+  <h2>登録済みの食品名（クリックで入力欄に追加）</h2>
+  <p class="muted">食品名をクリックすると、上の「食べたもの」欄に1行追加されます。
+     続けてグラム数を入力してください（量は100gあたりの値から自動で換算します）。</p>
+  <ul class="food-list">
     {% for name in food_names %}
-      <li>{{ name }}</li>
+      <li><button type="button" class="food-name" data-name="{{ name }}">{{ name }}</button></li>
     {% endfor %}
   </ul>
 </div>
+
+<style>
+  /* 食品名ボタン：ふつうのボタン(緑)と区別するため、リンク風の控えめな見た目にする */
+  .food-list { list-style: none; padding: 0; margin: 0; }
+  .food-list li { display: inline-block; margin: 3px 6px 3px 0; }
+  .food-name { margin-top: 0; padding: 5px 10px; font-size: 0.95rem; font-weight: normal;
+               background: #eef3f8; color: #2a6db0; border: 1px solid #c9d8e8; }
+  .food-name:hover { background: #dce8f5; }
+</style>
+
+<script>
+  // 食品名ボタンを押したら、「食べたもの」欄の末尾に「食品名␣」を1行追加する。
+  // グラム数はわざと入れない（勝手な量で記録されるのを防ぎ、続けて数字を打ってもらう）。
+  document.querySelectorAll(".food-name").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var box = document.querySelector('textarea[name="meal"]');
+      var line = btn.dataset.name + " ";
+      // すでに入力があれば改行してから足す（最後の行が空なら改行は足さない）
+      if (box.value && !box.value.endsWith("\n")) {
+        box.value += "\n";
+      }
+      box.value += line;
+      box.focus();  // すぐグラム数を打てるよう、入力欄にカーソルを移す
+    });
+  });
+</script>
 {% endblock %}

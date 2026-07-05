@@ -23,6 +23,7 @@
 
 import os
 import json
+import datetime
 
 from flask import Flask, render_template, request, redirect, url_for, flash
 
@@ -157,6 +158,25 @@ def onboarding():
 # 画面③：食事を記録（③摂取量 → ④残り → ⑤保存 を1画面で）
 # =====================================================================
 
+def build_record_form(form=None):
+    """
+    記録フォームの各欄に表示する値を作る。
+    ・初めて開いたとき(form=None) … 日付に「今日」を自動で入れる（毎回選ぶ手間を省く）。
+    ・入力エラーで戻ってきたとき … 送信された内容をそのまま入れ直す
+      （1か所の間違いで全部打ち直しにならないようにするため）。
+    """
+    if form is None:
+        return {"date": datetime.date.today().isoformat(),
+                "weight": "", "menu": "", "meal": "", "note": ""}
+    return {
+        "date": form.get("date", "") or datetime.date.today().isoformat(),
+        "weight": form.get("weight", ""),
+        "menu": form.get("menu", ""),
+        "meal": form.get("meal", ""),
+        "note": form.get("note", ""),
+    }
+
+
 @app.route("/record", methods=["GET", "POST"])
 def record():
     data = load_profile()
@@ -171,7 +191,8 @@ def record():
 
     if request.method == "GET":
         return render_template("record.html", food_names=food_names,
-                               profile=data["profile"])
+                               profile=data["profile"],
+                               form=build_record_form())
 
     # --- 送信(POST)の処理 ---
     meal_text = request.form.get("meal", "")
@@ -181,16 +202,19 @@ def record():
     note = request.form.get("note", "").strip()
 
     # 食事テキストを (食品名, グラム) に変換。間違いは丁寧に知らせて戻す。
+    # ※エラーで戻すときは form=... で入力内容を渡し、打ち直しを防ぐ。
     try:
         items = parse_meal_text(meal_text)
     except ValueError as e:
         flash(str(e))
         return render_template("record.html", food_names=food_names,
-                               profile=data["profile"])
+                               profile=data["profile"],
+                               form=build_record_form(request.form))
     if not items:
         flash("食べたものを1品以上入力してください。")
         return render_template("record.html", food_names=food_names,
-                               profile=data["profile"])
+                               profile=data["profile"],
+                               form=build_record_form(request.form))
 
     # ③ 摂取量の計算（知らない食品名は ValueError）。
     try:
@@ -198,7 +222,8 @@ def record():
     except ValueError as e:
         flash(str(e))
         return render_template("record.html", food_names=food_names,
-                               profile=data["profile"])
+                               profile=data["profile"],
+                               form=build_record_form(request.form))
 
     # ④ 残り許容量 ＝ 目標 − 実績。
     remaining = calculate_remaining(targets, intake)

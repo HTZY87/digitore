@@ -26,15 +26,28 @@
         {% endif %}
       </td>
     </tr>
+    {# 言い回しはカロリー行と同じ「あと◯◯／◯◯オーバー」に統一する #}
     <tr>
       <td class="text">F 脂質</td>
       <td class="num">{{ "%.1f"|format(intake["F"]) }} g</td>
-      <td class="num">残り {{ "%.1f"|format(remaining["F"]) }} g</td>
+      <td class="num">
+        {% if remaining["F"] >= 0 %}
+          あと {{ "%.1f"|format(remaining["F"]) }} g
+        {% else %}
+          {{ "%.1f"|format(-remaining["F"]) }} g オーバー
+        {% endif %}
+      </td>
     </tr>
     <tr>
       <td class="text">C 炭水化物</td>
       <td class="num">{{ "%.1f"|format(intake["C"]) }} g</td>
-      <td class="num">残り {{ "%.1f"|format(remaining["C"]) }} g</td>
+      <td class="num">
+        {% if remaining["C"] >= 0 %}
+          あと {{ "%.1f"|format(remaining["C"]) }} g
+        {% else %}
+          {{ "%.1f"|format(-remaining["C"]) }} g オーバー
+        {% endif %}
+      </td>
     </tr>
   </table>
   <p class="muted">「残り許容量」は 目標 − 実績 です。プラス＝まだ食べてよい量、
