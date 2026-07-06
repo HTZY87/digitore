@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<!--
+  デジトレ PWA版：自動テストのページ
+
+  このページをブラウザで開くと、移植した計算ロジックのテストが自動で走り、
+  結果が ✓（合格）/ ✗（不合格）で一覧表示される。
+  内容は PC版の test_targets.py / test_intake.py / test_consult.py と同じ検証＋
+  PWA版で追加した部品（入力の解釈・CSV変換・安全判定）のテスト。
+
+  ★Python版とJavaScript版で「同じ計算・同じ結果」を守るための命綱。
+    計算ロジックを直したときは、必ずこのページと Python 側のテストの両方を確認する。
+-->
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>デジトレ PWA版 自動テスト</title>
+  <style>
+    body { font-family: "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+           max-width: 760px; margin: 0 auto; padding: 20px; background: #f7f7f5; }
+    li.pass { color: #1e7e42; }
+    li.fail { color: #c0392b; font-weight: bold; }
+    #summary { font-size: 1.2rem; font-weight: bold; margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <h1>🧪 デジトレ PWA版 自動テスト</h1>
+  <ul id="results"></ul>
+  <p id="summary"></p>
+
+  <!-- テスト対象の部品を読み込む（アプリ本体 app.js は画面用なので読み込まない） -->
+  <script src="foods.js"></script>
+  <script src="targets.js"></script>
+  <script src="intake.js"></script>
+  <script src="consult.js"></script>
+  <script src="safety.js"></script>
+  <script src="storage.js"></script>
+
+  <script>
+    // ---------------- テスト用の小さな部品 ----------------
+
+    // 条件が成り立たなければエラーで止める（Python の assert と同じ）
+    function assert(condition, message) {
+      if (!condition) throw new Error(message || "assertが失敗しました");
+    }
+
+    // 2つの数が「ほぼ等しい」か（小数計算の極小誤差を許して比べる）
+    function approxEqual(a, b, tol) {
+      return Math.abs(a - b) < (tol === undefined ? 0.01 : tol);
+    }
+
+    // 共通のテスト人物（test_targets.py と同じ）
+    const person = {
+      gender: "male", age: 30, height: 170, weight: 70,
+      activity_level: 1.5, goal_offset: -500,
+    };
+
+    // ---------------- テスト本体 ----------------
+    const tests = [
+
+      // ===== targets（test_targets.py と同じ3件） =====
+      ["targets 1：③ダイエット特化の数値が想定どおり", () => {
+        const r = calculateDailyTargets({ ...person, strategy: "③ダイエット特化" });
+        assert(approxEqual(r["BMR"], 1617.5), `BMRが想定外: ${r["BMR"]}`);
+        assert(approxEqual(r["TDEE"], 2426.25), `TDEEが想定外: ${r["TDEE"]}`);
+        assert(approxEqual(r["Target Kcal"], 1926.25), `目標kcalが想定外: ${r["Target Kcal"]}`);
+        assert(approxEqual(r["P(g)"], 144.46875), `Pが想定外: ${r["P(g)"]}`);
+        assert(approxEqual(r["F(g)"], 42.80555556), `Fが想定外: ${r["F(g)"]}`);
+        assert(approxEqual(r["C(g)"], 240.78125), `Cが想定外: ${r["C(g)"]}`);
+      }],
+
+      ["targets 2：全4戦略で PFC逆算カロリー ≒ 目標kcal", () => {
+        for (const strategy of Object.keys(STRATEGIES)) {
+          const r = calculateDailyTargets({ ...person, strategy });
+          const kcalFromPfc = r["P(g)"] * KCAL_PER_GRAM.P
+            + r["F(g)"] * KCAL_PER_GRAM.F + r["C(g)"] * KCAL_PER_GRAM.C;
+          assert(approxEqual(kcalFromPfc, r["Target Kcal"], 0.1),
+            `${strategy}: PFC逆算${kcalFromPfc} と 目標${r["Target Kcal"]} がズレている`);
+        }
+      }],
+
+      ["targets 3：不正な性別 'Male' はエラーで弾ける", () => {
+        let raised = false;
+        try {
+          calculateDailyTargets({ ...person, gender: "Male", strategy: "①ウェルネス" });
+        } catch (e) { raised = true; }
+        assert(raised, "不正な性別なのにエラーが出なかった");
+      }],
+
+      // ===== intake（test_intake.py と同じ4件） =====
+      ["intake 1：ちょうど100gはデータの値と一致", () => {
+        const r = calculateIntake([["ごはん（精白米）", 100]]);
+        assert(approxEqual(r.kcal, 156), `kcal想定外: ${r.kcal}`);
+        assert(approxEqual(r.P, 2.5), `P想定外: ${r.P}`);
+        assert(approxEqual(r.F, 0.3), `F想定外: ${r.F}`);
+        assert(approxEqual(r.C, 37.1), `C想定外: ${r.C}`);
+      }],
+
+      ["intake 2：複数食品の合計が手計算と一致", () => {
+        // ごはん200g（倍率2）＋卵50g（倍率0.5）→ kcal383, P11.1, F5.7, C74.4
+        const r = calculateIntake([["ごはん（精白米）", 200], ["卵（全卵・生）", 50]]);
+        assert(approxEqual(r.kcal, 383), `kcal想定外: ${r.kcal}`);
+        assert(approxEqual(r.P, 11.1), `P想定外: ${r.P}`);
+        assert(approxEqual(r.F, 5.7), `F想定外: ${r.F}`);
+        assert(approxEqual(r.C, 74.4), `C想定外: ${r.C}`);
+      }],
+
+      ["intake 3：知らない食品名はエラーで弾ける", () => {
+        let raised = false;
+        try { calculateIntake([["存在しない食品", 100]]); } catch (e) { raised = true; }
+        assert(raised, "知らない食品名なのにエラーが出なかった");
+      }],
+
+      ["intake 4：何も食べていなければ合計は0", () => {
+        const r = calculateIntake([]);
+        assert(r.kcal === 0 && r.P === 0 && r.F === 0 && r.C === 0, `空なのに0でない: ${JSON.stringify(r)}`);
+      }],
+
+      // ===== consult（test_consult.py と同じ3件） =====
+      ["consult 1：基本の残り許容量（目標−実績）が正しい", () => {
+        const TARGETS = { "Target Kcal": 2000.0, "P(g)": 150.0, "F(g)": 50.0, "C(g)": 250.0 };
+        const r = calculateRemaining(TARGETS, { kcal: 1200.0, P: 90.0, F: 30.0, C: 150.0 });
+        assert(approxEqual(r.kcal, 800.0), `kcal残り想定外: ${r.kcal}`);
+        assert(approxEqual(r.P, 60.0), `P残り想定外: ${r.P}`);
+        assert(approxEqual(r.F, 20.0), `F残り想定外: ${r.F}`);
+        assert(approxEqual(r.C, 100.0), `C残り想定外: ${r.C}`);
+      }],
+
+      ["consult 2：食べ過ぎは残りがマイナス（超過）", () => {
+        const TARGETS = { "Target Kcal": 2000.0, "P(g)": 150.0, "F(g)": 50.0, "C(g)": 250.0 };
+        const r = calculateRemaining(TARGETS, { kcal: 2300.0, P: 100.0, F: 70.0, C: 280.0 });
+        assert(r.kcal < 0, `超過なのにkcalがマイナスでない: ${r.kcal}`);
+        assert(approxEqual(r.kcal, -300.0), `超過kcal想定外: ${r.kcal}`);
+        assert(approxEqual(r.F, -20.0), `超過F想定外: ${r.F}`);
+      }],
+
+      ["consult 3：何も食べていなければ残り＝目標そのまま", () => {
+        const TARGETS = { "Target Kcal": 2000.0, "P(g)": 150.0, "F(g)": 50.0, "C(g)": 250.0 };
+        const r = calculateRemaining(TARGETS, { kcal: 0.0, P: 0.0, F: 0.0, C: 0.0 });
+        assert(approxEqual(r.kcal, 2000.0), `kcal想定外: ${r.kcal}`);
+        assert(approxEqual(r.P, 150.0), `P想定外: ${r.P}`);
+      }],
+
+      // ===== safety（PWA版で追加。safety.py の式どおりかを検証） =====
+      ["safety 1：70kgで-500kcalなら月約3%＝無理のない範囲", () => {
+        const s = evaluateSafety(70, -500);
+        // 月の変化 = -500*30/7200 = -2.0833…kg、割合 = 2.0833/70*100 = 2.976…%
+        assert(approxEqual(s.monthly_change_kg, -2.083333), `月変化想定外: ${s.monthly_change_kg}`);
+        assert(approxEqual(s.percent, 2.97619), `割合想定外: ${s.percent}`);
+        assert(s.is_extreme === false, "5%未満なのに警告になっている");
+      }],
+
+      ["safety 2：40kgで-500kcalなら5%超＝警告になる", () => {
+        const s = evaluateSafety(40, -500);
+        assert(approxEqual(s.percent, 5.208333), `割合想定外: ${s.percent}`);
+        assert(s.is_extreme === true, "5%超なのに警告になっていない");
+      }],
+
+      // ===== parseMealText（PWA版で追加。入力の解釈） =====
+      ["入力解釈 1：「食品名 グラム」の行を分解できる", () => {
+        const items = parseMealText("ごはん（精白米） 200\n卵（全卵・生） 50");
+        assert(items.length === 2, `件数想定外: ${items.length}`);
+        assert(items[0][0] === "ごはん（精白米）" && items[0][1] === 200, `1行目想定外: ${items[0]}`);
+        assert(items[1][0] === "卵（全卵・生）" && items[1][1] === 50, `2行目想定外: ${items[1]}`);
+      }],
+
+      ["入力解釈 2：カンマ区切りでも同じに解釈できる", () => {
+        const items = parseMealText("ごはん（精白米）,200");
+        assert(items[0][0] === "ごはん（精白米）" && items[0][1] === 200, `想定外: ${items[0]}`);
+      }],
+
+      ["入力解釈 3：全角スペース・全角数字も受け付ける（iPhone向け）", () => {
+        const items = parseMealText("ごはん（精白米）　２００");
+        assert(items[0][0] === "ごはん（精白米）" && items[0][1] === 200, `想定外: ${items[0]}`);
+      }],
+
+      ["入力解釈 4：量が無い行・数字でない行はエラーで知らせる", () => {
+        let raised = 0;
+        try { parseMealText("ごはん（精白米）"); } catch (e) { raised++; }
+        try { parseMealText("ごはん（精白米） たくさん"); } catch (e) { raised++; }
+        assert(raised === 2, `エラーになるべき2件のうち ${raised} 件しかエラーにならない`);
+      }],
+
+      ["入力解釈 5：空行だけなら空のリストになる", () => {
+        assert(parseMealText("\n  \n").length === 0, "空行だけなのに品目が出た");
+      }],
+
+      // ===== CSV変換（PWA版で追加。PC版 records.csv との往復） =====
+      ["CSV 1：書き出し→取り込みで、元の記録と一致（往復テスト）", () => {
+        const records = [
+          { "日付": "2026-07-06", "体重": 70, "メニュー名": "鶏むね定食",
+            "合計kcal": 626.5, "P(g)": 57.7, "F(g)": 8.55, "C(g)": 74.55,
+            "目標kcal": 1926.25, "目標P(g)": 144.46875, "判定/備考": "目標内" },
+          // カンマや引用符が混ざっても壊れないかも確かめる
+          { "日付": "2026-07-07", "体重": null, "メニュー名": 'カレー,大盛り "特製"',
+            "合計kcal": 900, "P(g)": 30, "F(g)": 25, "C(g)": 120,
+            "目標kcal": 1926.25, "目標P(g)": 144.46875, "判定/備考": "オーバー" },
+        ];
+        const back = csvToRecords(recordsToCsv(records));
+        assert(JSON.stringify(back) === JSON.stringify(records),
+          "往復で内容が変わった:\n" + JSON.stringify(back));
+      }],
+
+      ["CSV 2：見出しが違うCSVはエラーで弾ける", () => {
+        let raised = false;
+        try { csvToRecords("日付,体重\n2026-07-06,70"); } catch (e) { raised = true; }
+        assert(raised, "見出し違いなのにエラーが出なかった");
+      }],
+    ];
+
+    // ---------------- 実行と結果表示 ----------------
+    const list = document.getElementById("results");
+    let passed = 0;
+
+    for (const [name, fn] of tests) {
+      const li = document.createElement("li");
+      try {
+        fn();
+        li.textContent = `✓ ${name}`;
+        li.className = "pass";
+        passed++;
+      } catch (e) {
+        li.textContent = `✗ ${name} — ${e.message}`;
+        li.className = "fail";
+      }
+      list.appendChild(li);
+    }
+
+    const summary = document.getElementById("summary");
+    summary.textContent = passed === tests.length
+      ? `===== すべて合格 🎉（${passed}/${tests.length}） =====`
+      : `⚠ ${tests.length - passed} 件 不合格（合格 ${passed}/${tests.length}）`;
+  </script>
+</body>
+</html>
