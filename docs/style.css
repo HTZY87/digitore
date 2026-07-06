@@ -1,0 +1,140 @@
+/* =====================================================================
+   デジトレ PWA版の見た目（CSS）
+
+   PC版（templates/base.html の <style>）をもとに、iPhoneで使いやすいよう
+   ・画面下のタブバー（アプリ風の切り替えボタン）
+   ・セーフエリア（＝iPhoneの丸い角やホームバーと重ならない余白）
+   を足したもの。色づかいはPC版と同じにして、同じアプリだと分かるようにする。
+   ===================================================================== */
+
+body {
+  font-family: "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 16px;
+  /* 下のタブバーに中身が隠れないよう、その分の余白を確保する。
+     env(safe-area-inset-bottom) は iPhone のホームバー分の高さ。 */
+  padding-bottom: calc(80px + env(safe-area-inset-bottom));
+  /* 上もノッチ（画面上の切り欠き）と重ならないようにする */
+  padding-top: calc(16px + env(safe-area-inset-top));
+  background: #f7f7f5;
+  color: #222;
+  line-height: 1.7;
+}
+
+h1 { font-size: 1.4rem; margin: 0 0 12px; }
+h2 { font-size: 1.15rem; border-bottom: 2px solid #4a90d9; padding-bottom: 4px; }
+h3 { font-size: 1.0rem; }
+a { color: #2a6db0; }
+
+.card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 16px 18px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  margin-bottom: 16px;
+}
+
+/* ホームの大きなメニューボタン */
+.menu a {
+  display: block;
+  padding: 14px 16px;
+  margin: 8px 0;
+  background: #4a90d9;
+  color: #fff;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: bold;
+}
+.menu a:hover { background: #3b78bd; }
+
+label { display: block; margin-top: 12px; font-weight: bold; }
+input, select, textarea {
+  font-size: 1rem;               /* 16px以上にするとiPhoneで自動ズームされない */
+  padding: 9px 10px;
+  margin-top: 4px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  width: 100%;
+  box-sizing: border-box;
+  background: #fff;
+}
+textarea { min-height: 120px; font-family: inherit; }
+
+button {
+  margin-top: 18px;
+  padding: 12px 20px;
+  font-size: 1rem;
+  background: #2e9e5b;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+}
+button:hover { background: #27834c; }
+/* 控えめなボタン（取り込みなど、主役でない操作用） */
+button.secondary { background: #6a7a8a; }
+button.secondary:hover { background: #59687a; }
+
+table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: right; }
+th { background: #eef3f8; }
+td.text, th.text { text-align: left; }
+
+/* 記録一覧の表は列が多いので、横にスクロールできる箱に入れる */
+.table-wrap { overflow-x: auto; }
+
+.flash {
+  background: #fff6d6;
+  border: 1px solid #e6c84a;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+}
+.warn { background: #ffe3e3; border-color: #e07a7a; }
+
+.num { font-variant-numeric: tabular-nums; } /* 数字の幅をそろえて読みやすく */
+.muted { color: #777; font-size: 0.9rem; }
+.footer-note { margin-top: 4px; }
+
+/* グラフの入れ物（canvasはそのままだと伸び縮みが不安定なため箱で包む） */
+.chart-box { position: relative; width: 100%; }
+
+/* 食品名ボタン：ふつうのボタン(緑)と区別する、リンク風の控えめな見た目 */
+.food-list { list-style: none; padding: 0; margin: 0; }
+.food-list li { display: inline-block; margin: 3px 6px 3px 0; }
+.food-name {
+  margin-top: 0;
+  padding: 6px 10px;
+  font-size: 0.95rem;
+  font-weight: normal;
+  background: #eef3f8;
+  color: #2a6db0;
+  border: 1px solid #c9d8e8;
+}
+.food-name:hover { background: #dce8f5; }
+
+/* ================= 画面下のタブバー ================= */
+.tabbar {
+  position: fixed;              /* スクロールしても画面下に居続ける */
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  background: #ffffff;
+  border-top: 1px solid #ddd;
+  /* iPhoneのホームバー（画面下の横棒）と重ならない余白 */
+  padding-bottom: env(safe-area-inset-bottom);
+  z-index: 10;
+}
+.tabbar a {
+  flex: 1;                      /* 5つのボタンを等しい幅で並べる */
+  text-align: center;
+  padding: 6px 0 4px;
+  font-size: 0.7rem;
+  color: #667;
+  text-decoration: none;
+}
+.tabbar a .icon { display: block; font-size: 1.25rem; line-height: 1.3; }
+.tabbar a.active { color: #2a6db0; font-weight: bold; } /* いま開いている画面 */

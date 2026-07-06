@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<!--
+  デジトレ PWA版：唯一のHTML（1枚のページの中で画面を切り替える方式＝SPA）
+
+  PC版（Flask）はページを行き来するたびにサーバーがHTMLを作っていたが、
+  PWA版はサーバーが無いので、全画面をこの1枚に用意しておき、
+  app.js が「いま見せる画面」だけを表示する（他は hidden で隠す）。
+-->
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <!-- viewport-fit=cover：iPhoneの画面の丸い角・ノッチまで使う宣言（下のタブバー配置に必要） -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>デジトレ</title>
+
+  <!-- PWAの設定ファイル（アプリ名・アイコン・全画面表示などの宣言） -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#4a90d9">
+
+  <!-- iPhoneで「ホーム画面に追加」したときのアイコンとアプリ扱いの宣言 -->
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="デジトレ">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>🥗 デジトレ</h1>
+
+  <!-- 一言メッセージ（PC版の flash と同じ役目。app.js が出し入れする） -->
+  <div id="flash" class="flash" hidden></div>
+
+  <main>
+    <!-- ================= 画面①：ホーム（メニュー） ================= -->
+    <section id="view-home">
+      <div class="card">
+        <h2>ようこそ</h2>
+        <!-- 初期設定済みなら今の目標、未設定なら案内を app.js が入れる -->
+        <div id="home-summary"></div>
+      </div>
+      <div class="card menu">
+        <h2>やりたいことを選んでください</h2>
+        <a href="#onboarding">① 初期設定（1日の目標を計算）</a>
+        <a href="#record">② 食事を記録する（残り許容量もすぐ分かります）</a>
+        <a href="#records">③ 記録の一覧を見る・CSVで控えを取る</a>
+        <a href="#charts">④ グラフを見る（実績vs目標・タンパク質達成度）</a>
+      </div>
+    </section>
+
+    <!-- ================= 画面②：初期設定（オンボーディング） ================= -->
+    <section id="view-onboarding" hidden>
+      <div class="card">
+        <h2>初期設定（あなたの情報）</h2>
+        <p class="muted">入力した情報から、1日の目標カロリーとPFC（タンパク質・脂質・炭水化物）を計算します。
+           計算も保存も、すべてこの端末の中だけで行われます。</p>
+
+        <form id="onboarding-form">
+          <label>性別</label>
+          <select name="gender" required>
+            <option value="male">男性</option>
+            <option value="female">女性</option>
+          </select>
+
+          <label>年齢（歳）</label>
+          <input type="number" name="age" min="10" max="100" step="1" value="30" required>
+
+          <label>身長（cm）</label>
+          <input type="number" name="height" min="100" max="250" step="0.1" value="170" required>
+
+          <label>現在の体重（kg）</label>
+          <input type="number" name="weight" min="20" max="300" step="0.1" value="65" required>
+
+          <label>活動強度（1.2＝低い 〜 1.9＝高い）</label>
+          <input type="number" name="activity_level" min="1.2" max="1.9" step="0.05" value="1.5" required>
+
+          <label>目的（1日のカロリー増減）</label>
+          <select name="goal_offset" required>
+            <option value="-250">減量・ゆっくり（-250kcal）</option>
+            <option value="-500" selected>減量・標準（-500kcal）</option>
+            <option value="-750">減量・ハイペース（-750kcal）</option>
+            <option value="0">維持（±0kcal）</option>
+            <option value="250">増量・標準（+250kcal）</option>
+            <option value="500">増量・しっかり（+500kcal）</option>
+          </select>
+
+          <label>PFC戦略</label>
+          <select name="strategy" required>
+            <option value="①ウェルネス">①ウェルネス（バランス重視）</option>
+            <option value="②ヘルスケア">②ヘルスケア（たんぱく質しっかり）</option>
+            <option value="③ダイエット特化" selected>③ダイエット特化（高P・低F）</option>
+            <option value="④筋肥大・競技者">④筋肥大・競技者（P最大）</option>
+          </select>
+
+          <button type="submit">この内容で目標を計算する</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ================= 画面③：目標の計算結果 ================= -->
+    <section id="view-result" hidden>
+      <div class="card">
+        <h2>あなたの1日の目標</h2>
+        <table>
+          <tr><td class="text">BMR（基礎代謝量＝何もしなくても使うカロリー）</td>
+              <td class="num"><span id="r-bmr"></span> kcal</td></tr>
+          <tr><td class="text">TDEE（1日の総消費カロリー）</td>
+              <td class="num"><span id="r-tdee"></span> kcal</td></tr>
+          <tr><td class="text"><strong>目標カロリー</strong></td>
+              <td class="num"><strong><span id="r-kcal"></span> kcal</strong></td></tr>
+          <tr><td class="text">P タンパク質</td><td class="num"><span id="r-p"></span> g</td></tr>
+          <tr><td class="text">F 脂質</td><td class="num"><span id="r-f"></span> g</td></tr>
+          <tr><td class="text">C 炭水化物</td><td class="num"><span id="r-c"></span> g</td></tr>
+        </table>
+      </div>
+
+      <!-- ⑥ 安全警告：極端な設定なら赤く警告、ふつうなら安心メッセージ -->
+      <div class="card" id="safety-card">
+        <h2>安全チェック</h2>
+        <p id="safety-text"></p>
+      </div>
+
+      <div class="card">
+        <p>目標が決まりました。次は <a href="#record">食事を記録</a>してみましょう。</p>
+      </div>
+    </section>
+
+    <!-- ================= 画面④：食事を記録 ================= -->
+    <section id="view-record" hidden>
+      <div class="card">
+        <h2>食事を記録する</h2>
+        <p class="muted">食べたものを「食品名 グラム」の形で1行ずつ入力してください。
+           計算すると「残り許容量」も表示し、この端末に保存します。</p>
+
+        <form id="record-form">
+          <label>日付</label>
+          <input type="date" name="date">
+
+          <label>体重（kg・未入力なら初期設定の <span id="record-weight-hint"></span>kg を使います）</label>
+          <input type="number" name="weight" min="20" max="300" step="0.1">
+
+          <label>メニュー名（例：鶏むね定食）</label>
+          <input type="text" name="menu" placeholder="食事">
+
+          <label>食べたもの（1行に「食品名 グラム」）</label>
+          <textarea name="meal" placeholder="ごはん（精白米） 200&#10;鶏むね肉（皮なし・生） 150&#10;卵（全卵・生） 50"></textarea>
+
+          <label>判定・備考（空ならカロリーの過不足を自動で記録します）</label>
+          <input type="text" name="note" placeholder="（任意）">
+
+          <button type="submit">計算して記録する</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2>登録済みの食品名（タップで入力欄に追加）</h2>
+        <p class="muted">食品名をタップすると、上の「食べたもの」欄に1行追加されます。
+           続けてグラム数を入力してください（量は100gあたりの値から自動で換算します）。</p>
+        <ul class="food-list" id="food-list"></ul>
+      </div>
+    </section>
+
+    <!-- ================= 画面⑤：記録しました（結果） ================= -->
+    <section id="view-record-done" hidden>
+      <div class="card">
+        <h2 id="done-title"></h2>
+        <table>
+          <tr><th class="text">項目</th><th>実績（食べた量）</th><th>残り許容量</th></tr>
+          <tr><td class="text">カロリー</td>
+              <td class="num" id="done-kcal-in"></td><td class="num" id="done-kcal-rem"></td></tr>
+          <tr><td class="text">P タンパク質</td>
+              <td class="num" id="done-p-in"></td><td class="num" id="done-p-rem"></td></tr>
+          <tr><td class="text">F 脂質</td>
+              <td class="num" id="done-f-in"></td><td class="num" id="done-f-rem"></td></tr>
+          <tr><td class="text">C 炭水化物</td>
+              <td class="num" id="done-c-in"></td><td class="num" id="done-c-rem"></td></tr>
+        </table>
+        <p class="muted">「残り許容量」は 目標 − 実績 です。プラス＝まだ食べてよい量、
+           マイナス＝食べ過ぎ（オーバー）を表します。</p>
+      </div>
+      <div class="card">
+        <p>続けて <a href="#record">もう1食 記録する</a> ／
+           <a href="#charts">グラフを見る</a> ／
+           <a href="#records">記録一覧を見る</a></p>
+      </div>
+    </section>
+
+    <!-- ================= 画面⑥：記録の一覧＋CSV入出力 ================= -->
+    <section id="view-records" hidden>
+      <div class="card">
+        <h2>記録の一覧</h2>
+        <div id="records-container"></div>
+      </div>
+
+      <div class="card">
+        <h2>データの控え（CSV）</h2>
+        <p class="muted">記録はこの端末の中だけに保存されています。Safariのデータ消去などで
+           消えることがあるため、ときどきCSV（PC版の records.csv と同じ形式）で控えを取ってください。</p>
+        <button type="button" id="export-csv">CSVを書き出す（エクスポート）</button>
+
+        <label>CSVの取り込み（records.csv の中身を貼り付け、またはファイルを選択）</label>
+        <input type="file" id="import-file" accept=".csv,text/csv">
+        <textarea id="import-text" placeholder="日付,体重,メニュー名,合計kcal,..."></textarea>
+        <button type="button" id="import-btn" class="secondary">取り込む（今の記録と置き換え）</button>
+      </div>
+    </section>
+
+    <!-- ================= 画面⑦：グラフ ================= -->
+    <section id="view-charts" hidden>
+      <div class="card">
+        <h2>グラフ</h2>
+        <p class="muted">この端末に保存された記録をもとに、開くたびに作り直しています。</p>
+
+        <h3>① カロリー：実績 vs 目標</h3>
+        <div class="chart-box"><canvas id="chart-calories"></canvas></div>
+
+        <h3>② タンパク質(P) の達成度</h3>
+        <div class="chart-box"><canvas id="chart-protein"></canvas></div>
+      </div>
+    </section>
+  </main>
+
+  <p class="muted footer-note">※このアプリは「計算はコード・相談はAI」の方針で作っています。
+     数値の計算と記録は本物のコードが担当します。データはこの端末の外に出ません。</p>
+
+  <!-- 画面下の切り替えバー（iPhoneアプリでおなじみのタブバー） -->
+  <nav class="tabbar">
+    <a href="#home" data-view="home"><span class="icon">🏠</span>ホーム</a>
+    <a href="#onboarding" data-view="onboarding"><span class="icon">⚙️</span>初期設定</a>
+    <a href="#record" data-view="record"><span class="icon">✏️</span>記録</a>
+    <a href="#records" data-view="records"><span class="icon">📋</span>一覧</a>
+    <a href="#charts" data-view="charts"><span class="icon">📈</span>グラフ</a>
+  </nav>
+
+  <!-- 部品の読み込み。計算（移植したロジック）→保存→グラフ→画面制御 の順 -->
+  <script src="foods.js"></script>
+  <script src="targets.js"></script>
+  <script src="intake.js"></script>
+  <script src="consult.js"></script>
+  <script src="safety.js"></script>
+  <script src="storage.js"></script>
+  <script src="vendor/chart.umd.js"></script>
+  <script src="charts.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
